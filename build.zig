@@ -83,11 +83,39 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const lib = b.addLibrary(.{
+        .name = "gzip_wrap",
+        .linkage = .dynamic, // This is the default, but you can also use .static.
+        // The root module of a library must also have a target and optimization
+        // level defined, just like an executable.
+        .root_module = b.addModule("gzipW", .{
+            .root_source_file = b.path("src/lib.zig"),
+            .target = target,
+            .optimize = optimize,
+            // Libraries can also import other modules, just like executables.
+            // .imports = &.{
+            //     // Here we import the module we defined above, which will allow
+            //     // us to use its declarations in the library.
+            //     .{ .name = "leecode_d", .module = mod },
+            // },
+        }),
+    });
+
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
     // by passing `--prefix` or `-p`.
+    lib.linkLibC();
+    // lib.linkLibrary(.{ .path = "./libdeflate/libdeflate.a" }); // Link the C standard library.
+    lib.addIncludePath(b.path("libdeflate"));
+    lib.addObjectFile(b.path("./libdeflate/libdeflate.a"));
+
+    exe.linkLibC();
+    // lib.linkLibrary(.{ .path = "./libdeflate/libdeflate.a" }); // Link the C standard library.
+    exe.addIncludePath(b.path("libdeflate"));
+    exe.addObjectFile(b.path("./libdeflate/libdeflate.a"));
     b.installArtifact(exe);
+    b.installArtifact(lib);
 
     // This creates a top level step. Top level steps have a name and can be
     // invoked by name when running `zig build` (e.g. `zig build run`).
